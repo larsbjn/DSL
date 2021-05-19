@@ -16,6 +16,7 @@ class EnvironmentGenerator implements FileGenerator {
 		fsa.generateFile(".env", ''' 
 			DATABASE_NAME=«database.name»
 			«database.config.map[it.generateConfigurations].join("\n")»
+			FILEPATH="./db.sqlite"
 		''')
 	}
 	

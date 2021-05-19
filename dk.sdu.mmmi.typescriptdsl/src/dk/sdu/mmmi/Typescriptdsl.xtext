@@ -79,7 +79,7 @@ AttributeType returns AttributeType:
 ;
 
 PrimaryType returns PrimaryType:
-	{IntType}'int' | {StringType} 'string' | {DateType} 'date' 
+	{IntType} 'int' | {StringType} 'string' | {DateType} 'date' 
 ;
 
 TableType returns TableType:

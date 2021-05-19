@@ -14,7 +14,10 @@ class DelegateGenerator implements IntermediateGenerator {
 		«t.generateDelegate»
 		«ENDFOR»
 		
-		«generateClient(tables)»
+		«generateTableClient(tables)»
+		«generateQueriesInterface()»
+		«generateQueries()»
+		«generateClient()»
 	'''
 	
 	private def generateDelegate(Table table) '''
@@ -26,11 +29,41 @@ class DelegateGenerator implements IntermediateGenerator {
 		}
 	'''
 	
-	private def generateClient(List<Table> tables) '''
-		export interface Client {
+	private def generateTableClient(List<Table> tables) '''
+		export interface TableClient {
 			«FOR t: tables»
 			«t.name.toCamelCase»: «t.name»Delegate
 			«ENDFOR»
 		}	
 	'''
+	
+	private def generateQueriesInterface() '''
+		export interface Queries {
+			test(x: number): Promise<{ 'firstname': string, 'lastname': string }>
+			selectUser(x: number): Promise<User>
+		}
+	'''
+	
+	private def generateQueries() '''
+		const config = getConfig()
+		const knexClient = knex(config)
+
+		export const queries: Record<keyof Queries, any> = {
+			test: function (x: number) {
+				return knexClient('user').select('firstName')
+					.select('lastName').where('age', x).first()
+			},
+			selectUser: function (x: number) {
+				return knexClient('user').first('*').where('age', x)
+			}
+		}	
+	'''	
+
+	
+	private def generateClient() '''
+		export interface Client extends TableClient, Queries {
+			
+		}	
+	'''
+	
 }
