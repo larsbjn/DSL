@@ -45,6 +45,9 @@ class DelegateGenerator implements IntermediateGenerator {
 	'''
 	
 	private def generateQueries() '''
+		import knex from "knex";
+		import {getConfig} from "src/client/config";
+
 		const config = getConfig()
 		const knexClient = knex(config)
 

@@ -18,7 +18,7 @@ class TableDataGenerator implements IntermediateGenerator {
 			primaryKey: string
 		}
 		
-		export const tableData: Record<keyof Client, TableData> = {
+		export const tableData: Record<keyof TableClient, TableData> = {
 			«FOR t: tables SEPARATOR ','»
 			«t.generateTable»
 			«ENDFOR»
