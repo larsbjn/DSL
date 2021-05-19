@@ -15,7 +15,8 @@ Config returns Config:
 	{ConfigUrl} 'url' value=STRING |
 	{ConfigPort} 'port' value=INT |
 	{ConfigUsername} 'username' value=STRING |
-	{ConfigPassword} 'password' value=STRING
+	{ConfigPassword} 'password' value=STRING |
+	{ConfigFilePath} 'filepath' value=STRING
 ;
 
 Table:

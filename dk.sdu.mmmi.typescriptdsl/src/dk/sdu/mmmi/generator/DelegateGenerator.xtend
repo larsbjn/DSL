@@ -64,9 +64,7 @@ class DelegateGenerator implements IntermediateGenerator {
 
 	
 	private def generateClient() '''
-		export interface Client extends TableClient, Queries {
-			
-		}	
+		export interface Client extends TableClient, Queries { }	
 	'''
 	
 }
