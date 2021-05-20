@@ -8,6 +8,8 @@ Database:
 	config += Config*
 	
 	tables += Table+
+	
+	queries += Query*
 ;
 
 Config returns Config:
@@ -85,4 +87,22 @@ PrimaryType returns PrimaryType:
 
 TableType returns TableType:
 	table=[Table]
+;
+
+Query:
+	'query' name=ID ':' queryType=QueryType
+;
+
+QueryType:
+	Select | Delete
+;
+
+Select:
+	/* Create validation for checking ID = table.attributes */
+	/* Check if where statement for less or higher than is on ints attributes */
+	'select' (all?='*' | attributes+=ID+ (',' attributes+=ID)*) 'from' table=[Table]
+;
+
+Delete:
+	'delete' table=[Table]
 ;
