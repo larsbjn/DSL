@@ -90,7 +90,7 @@ TableType returns TableType:
 ;
 
 Query:
-	'query' name=ID ':' queryType=QueryType
+	'query' name=ID ':' 'from' table=[Table] queryType=QueryType
 ;
 
 QueryType:
@@ -100,7 +100,8 @@ QueryType:
 Select:
 	/* Create validation for checking ID = table.attributes */
 	/* Check if where statement for less or higher than is on ints attributes */
-	'select' (all?='*' | attributes+=ID+ (',' attributes+=ID)*) 'from' table=[Table]
+	'select' (all?='*' | attributes+=[Attribute]+ (',' attributes+=[Attribute])*)
+		('where' where=OrConstraint)?
 ;
 
 Delete:

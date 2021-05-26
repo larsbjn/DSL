@@ -9,6 +9,7 @@ import dk.sdu.mmmi.typescriptdsl.AttributeType
 import dk.sdu.mmmi.typescriptdsl.IntType
 import dk.sdu.mmmi.typescriptdsl.StringType
 import dk.sdu.mmmi.typescriptdsl.DateType
+import dk.sdu.mmmi.typescriptdsl.Attribute
 
 class QueryGenerator implements IQueryGenerator {
 	
@@ -48,23 +49,24 @@ class QueryGenerator implements IQueryGenerator {
 	private def generateQueriesInterface(List<Query> queries) '''
 		export interface Queries {
 			«FOR q: queries.filter[it.queryType instanceof Select]»
-				«q.name.toCamelCase»(): Promise<«generateQueryReturnType(q.queryType)»>
+				«q.name.toCamelCase»(): Promise<«generateQueryReturnType(q)»>
 			«ENDFOR»
 		}
 	'''	
 	
-	private def generateQueryReturnType(QueryType qt) {
+	private def generateQueryReturnType(Query q) {
 		/* Få xtext til at fatte ting fra select typen */
+		val qt = q.queryType
 		switch qt {
 			case qt instanceof Select: {
 				val temp = qt as Select
 				if (temp.all) {
-					return qt.table.name
+					return q.table.name
 				}
 				if (!temp.attributes.empty) {
 					val str = new StringBuilder("{");
-					for (String attr : temp.attributes) {
-						val attrString = String.format(" %s: %s,", attr, getAttributeTypeAsString(temp.table.attributes.findFirst[it.name == attr].type))
+					for (Attribute attr : temp.attributes) {
+						val attrString = String.format(" %s: %s,", attr.name, getAttributeTypeAsString(q.table.attributes.findFirst[it.name == attr.name].type))
 						str.append(attrString)
 					}
 					str.append(' }')
@@ -98,15 +100,15 @@ class QueryGenerator implements IQueryGenerator {
 		val qt = q.queryType
 		switch qt {
 			case qt instanceof Select: {
-				val str = new StringBuilder("return knexClient('" + qt.table.name + "')");
+				val str = new StringBuilder("return knexClient('" + q.table.name + "')");
 				val temp = qt as Select
 				if (temp.all) {
 					str.append(".select()")
 					return str.toString
 				}
 				if (!temp.attributes.empty) {
-					for (String attr : temp.attributes) {
-						str.append(".select('" + attr + "')")
+					for (Attribute attr : temp.attributes) {
+						str.append(".select('" + attr.name + "')")
 					}
 					return str.toString
 				}

@@ -43,6 +43,9 @@ Workflow {
 				// Generates checks for @Deprecated grammar annotations, an IssueProvider and a corresponding PropertyPage
 				generateDeprecationValidation = true
 			}
+			scopeProvider = {
+			   generateXtendStub = true
+			}
 			generator = {
 				generateXtendStub = true
 				generateXtendMain = true
