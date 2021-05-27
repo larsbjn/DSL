@@ -26,6 +26,9 @@ class ConstraintValidator extends AbstractTypescriptdslValidator {
 			error('''Attribute «field.attr.name» is not of type int''', TypescriptdslPackage.Literals.FIELD__ATTR)		
 	}
 	
+	// TODO Create validation for strings on where statements 
+	// TODO Create validation for not regex only attribute = something in where statements
+	
 	@Check
 	def validateConstraint(Attribute attr) {
 		val List<CompareConstraint> compares = newArrayList()
