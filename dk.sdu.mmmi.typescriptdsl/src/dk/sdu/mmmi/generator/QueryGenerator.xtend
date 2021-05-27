@@ -26,6 +26,8 @@ import dk.sdu.mmmi.typescriptdsl.Field
 import dk.sdu.mmmi.typescriptdsl.NumberExp
 import java.util.Map
 import java.util.HashMap
+import dk.sdu.mmmi.typescriptdsl.Parameter
+import java.util.HashSet
 
 class QueryGenerator implements IQueryGenerator {
 	
@@ -65,7 +67,7 @@ class QueryGenerator implements IQueryGenerator {
 	private def generateQueriesInterface(List<Query> queries) '''
 		export interface Queries {
 			«FOR q: queries.filter[it.queryType instanceof Select]»
-				«q.name.toCamelCase»(): Promise<«generateQueryReturnType(q)»>
+				«q.name.toCamelCase»(«generateQueryParameters(q)»): Promise<«generateQueryReturnType(q)»>
 			«ENDFOR»
 		}
 	'''	
@@ -74,16 +76,8 @@ class QueryGenerator implements IQueryGenerator {
 		val where = q.where
 		val parameters = where.parameters(new HashMap)
 		val str = new StringBuilder("")
-		parameters.forEach[CharSequence name, CharSequence type|
-			str.append(name + ":")
-			switch type.toString {
-				case "java.lang.Integer": {
-					str.append(" number, ")
-				}
-				default: {
-					println("Not Found")
-				}
-			}
+		parameters.forEach[name, type|
+			str.append(name + ": " + type + ",")
 		]
 		return str
 	}
@@ -91,10 +85,11 @@ class QueryGenerator implements IQueryGenerator {
 	def Map<String, String> parameters(Constraint cons, Map<String, String> parameters) {
 		switch cons {
 			CompareConstraint: {
-				var name = cons.left.printParametersExp
-				name = name.toString.concat(parameters.size.toString)
-				val type = cons.right.printParametersExp
-				parameters.put(name.toString, type.toString)
+				val type = cons.left.printParametersExp
+				val name = cons.right.printParametersExp.toString
+				if (!name.empty) {
+					parameters.put(name.toString, type.toString)	
+				}
 			}
 			Or: {
 				cons.left.parameters(parameters)
@@ -103,9 +98,6 @@ class QueryGenerator implements IQueryGenerator {
 			And: {
 				cons.left.parameters(parameters)
 				cons.right.parameters(parameters)
-			}
-			RegexConstraint: {
-				println("Regex")
 			}
 			default: {
 				println("Not found")	
@@ -133,11 +125,15 @@ class QueryGenerator implements IQueryGenerator {
 				exp.right.printParametersExp	
 			}
 			NumberExp: {
-				'''«exp.value.class.name»'''
+				''''''
 			}
 			Field: {
-				'''«exp.attr.name»'''
+				'''«exp.attr.type.attributeTypeAsString»'''
 			}
+			Parameter: {
+				'''«exp.value»'''
+			}
+			
 			default: throw new Exception()
 		}
 	}
@@ -177,7 +173,7 @@ class QueryGenerator implements IQueryGenerator {
 
 		export const queries: Record<keyof Queries, any> = {
 			«FOR q: queries»
-				«q.name.toCamelCase»: function() {
+				«q.name.toCamelCase»: function(«generateQueryParameters(q)») {
 					«generateKnexQuery(q)»«generateWhere(q.where)»
 				},
 			«ENDFOR»
@@ -208,7 +204,62 @@ class QueryGenerator implements IQueryGenerator {
 		if (c === null) {
 			return ''
 		}
-		return '.whereRaw("' + c.constraints + '")'
+		var parameters = c.generateWhereRawParameters.toString
+		var str = new StringBuilder('.whereRaw("' + c.constraints)
+		if (parameters.empty) {
+			str.append('")')
+		} else {
+			str.append(parameters + ')')
+		}
+		return str
+	}
+	
+	def CharSequence generateWhereRawParameters(Constraint cons) {
+		val parameters = cons.rawParameters(new HashSet<String>)
+		if (parameters.empty) {
+			return ''
+		}
+		var str = new StringBuilder('", [')
+		for (String s : parameters) {
+			println(s)
+			str.append(s + ',')
+		}
+		str.append(']')
+		return str
+	}
+	
+	def Set<String> rawParameters(Constraint cons, Set<String> parameters) {
+		switch cons {
+			CompareConstraint: {
+				val left = cons.left.printRawParameters.toString
+				val right = cons.right.printRawParameters.toString
+				if (!left.empty) {
+					parameters.add(left)
+				}
+				if (!right.empty) {
+					parameters.add(right)
+				}
+			}
+			Or: {
+				cons.left.rawParameters(parameters)
+				cons.right.rawParameters(parameters)	
+			}
+			And: {
+				cons.left.rawParameters(parameters)
+				cons.right.rawParameters(parameters)	
+			}
+			default: {
+				println("Unknown")
+			}
+		}
+		return parameters
+	}
+	
+	def CharSequence printRawParameters(Expression exp) {
+		switch exp {
+			Parameter: '''«exp.value»'''
+			default: ''''''
+		}
 	}
 	
 	def CharSequence constraints(Constraint cons) {
@@ -230,6 +281,7 @@ class QueryGenerator implements IQueryGenerator {
 			Parenthesis: '''(«exp.exp.printExp»)'''
 			NumberExp: '''«exp.value»'''
 			Field: '''«exp.attr.name»'''
+			Parameter: '''?'''
 			default: throw new Exception()
 		}
 	}

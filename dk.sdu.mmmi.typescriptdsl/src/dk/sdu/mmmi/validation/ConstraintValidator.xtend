@@ -28,6 +28,8 @@ class ConstraintValidator extends AbstractTypescriptdslValidator {
 	
 	// TODO Create validation for strings on where statements 
 	// TODO Create validation for not regex only attribute = something in where statements
+	// TODO Create validation for Parameters on expressions only works on Query types
+	// TODO Remove validation so string types attributes can be used in where clause in Query types
 	
 	@Check
 	def validateConstraint(Attribute attr) {

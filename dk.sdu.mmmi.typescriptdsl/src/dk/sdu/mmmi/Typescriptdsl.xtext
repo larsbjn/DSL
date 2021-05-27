@@ -61,7 +61,7 @@ Factor returns Expression:
 ;
 
 Primary returns Expression:
-	NumberExp | Field | Parenthesis
+	NumberExp | Field | Parenthesis | Parameter
 ;
 
 Parenthesis:
@@ -74,6 +74,10 @@ Field:
 
 NumberExp:
 	value=INT
+;
+
+Parameter:
+	value=STRING
 ;
 
 
