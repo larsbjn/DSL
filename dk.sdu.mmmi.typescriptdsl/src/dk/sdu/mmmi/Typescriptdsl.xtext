@@ -61,7 +61,7 @@ Factor returns Expression:
 ;
 
 Primary returns Expression:
-	NumberExp | Field | Parenthesis | Parameter
+	NumberExp | Field | Parenthesis | Parameter | StringExp
 ;
 
 Parenthesis:
@@ -77,6 +77,10 @@ NumberExp:
 ;
 
 Parameter:
+	'?'value=ID
+;
+
+StringExp:
 	value=STRING
 ;
 
@@ -108,5 +112,5 @@ Select:
 ;
 
 Delete:
-	'delete' table=[Table]
+	'delete' all?='*'
 ;

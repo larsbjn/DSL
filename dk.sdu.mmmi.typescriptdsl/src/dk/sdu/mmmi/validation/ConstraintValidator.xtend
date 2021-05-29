@@ -17,19 +17,164 @@ import org.eclipse.xtext.validation.Check
 import dk.sdu.mmmi.typescriptdsl.TypescriptdslPackage
 import dk.sdu.mmmi.typescriptdsl.IntType
 import dk.sdu.mmmi.typescriptdsl.Table
+import dk.sdu.mmmi.typescriptdsl.Parameter
+import org.eclipse.xtext.EcoreUtil2
+import dk.sdu.mmmi.typescriptdsl.Query
+import dk.sdu.mmmi.typescriptdsl.RegexConstraint
+import dk.sdu.mmmi.typescriptdsl.StringExp
+import java.util.ArrayList
+import java.util.Collections
+import java.util.jar.Attributes
+import dk.sdu.mmmi.typescriptdsl.StringType
+import dk.sdu.mmmi.typescriptdsl.DateType
 
 class ConstraintValidator extends AbstractTypescriptdslValidator {
 	
 	@Check
 	def validateField(Field field) {
-		if (!(field.attr.type instanceof IntType)) 
-			error('''Attribute «field.attr.name» is not of type int''', TypescriptdslPackage.Literals.FIELD__ATTR)		
+		val q = EcoreUtil2.getContainerOfType(field, Query)
+		if (q === null) {
+			if (!(field.attr.type instanceof IntType)) 
+			error('''Attribute «field.attr.name» is not of type int''', TypescriptdslPackage.Literals.FIELD__ATTR)	
+		}
+				
 	}
 	
-	// TODO Create validation for strings on where statements 
-	// TODO Create validation for not regex only attribute = something in where statements
-	// TODO Create validation for Parameters on expressions only works on Query types
-	// TODO Remove validation so string types attributes can be used in where clause in Query types
+	@Check
+	def validateOperatorsOnlyHoldsNumbers(Expression exp) {
+		switch exp {
+			Plus: { 
+				if (exp.left instanceof StringExp) {
+					error('''Operator + can not include strings''', TypescriptdslPackage.Literals.PLUS__LEFT)
+				}
+				if (exp.right instanceof StringExp) {
+					error('''Operator + can not include strings''', TypescriptdslPackage.Literals.PLUS__RIGHT)
+				}
+			}
+			Minus: { 
+				if (exp.left instanceof StringExp) {
+					error('''Operator - can not include strings''', TypescriptdslPackage.Literals.MINUS__LEFT)
+				}
+				if (exp.right instanceof StringExp) {
+					error('''Operator - can not include strings''', TypescriptdslPackage.Literals.MINUS__RIGHT)
+				}
+			}
+			Mult: { 
+				if (exp.left instanceof StringExp) {
+					error('''Operator * can not include strings''', TypescriptdslPackage.Literals.MULT__LEFT)
+				}
+				if (exp.right instanceof StringExp) {
+					error('''Operator * can not include strings''', TypescriptdslPackage.Literals.MULT__RIGHT)
+				}
+			}
+			Div: {
+				if (exp.left instanceof StringExp) {
+					error('''Operator / can not include strings''', TypescriptdslPackage.Literals.DIV__LEFT)
+				}
+				if (exp.right instanceof StringExp) {
+					error('''Operator / can not include strings''', TypescriptdslPackage.Literals.DIV__RIGHT)
+				}	 
+			}
+		}
+	}
+	
+
+	@Check
+	def validateTypeOfAttributeIsTheSameAsTheStaticConstraint(CompareConstraint cons) {
+		var type = cons.left as Field
+		var vali = cons.right
+		if (cons.right instanceof Field) {
+			type = cons.right as Field
+			vali = cons.left
+		}
+		if (vali instanceof Parameter) {
+			return
+		}
+		switch type.attr.type {
+			IntType: {
+				if (vali instanceof StringExp) {
+					error('''Attribute «type» is not of type int''', TypescriptdslPackage.Literals.COMPARE_CONSTRAINT__LEFT)
+				}
+			}
+			StringType: {
+				if (!(vali instanceof StringExp)) {
+					error('''Attribute «type» is not of type String''', TypescriptdslPackage.Literals.COMPARE_CONSTRAINT__RIGHT)
+				}
+			}
+			default: {
+				return
+			}
+		}
+	}
+	
+	@Check
+	def validateOnlyOneParameterPerCompareConstraint(Parameter p) {
+		val cons = EcoreUtil2.getContainerOfType(p, CompareConstraint)
+		var parameters = new ArrayList<String>
+		cons.getParametersFromCompareConstraint(parameters)
+		if (parameters.size > 1) {
+			error('''CompareConstraint cannot contains more than one parameter''', TypescriptdslPackage.Literals.PARAMETER__VALUE)
+		}
+	}
+	
+	@Check
+	def validateDuplicateParameterNameOnSameQuery(Parameter p) {
+		val q = EcoreUtil2.getContainerOfType(p, Query)
+		val parameters = getParametersOnQuery(q)
+		if (Collections.frequency(parameters, p.value) > 1) {
+			error('''Parameter «p.value» is not unique''', TypescriptdslPackage.Literals.PARAMETER__VALUE)
+		}		
+	}
+	
+	def getParametersOnQuery(Query q) {
+		var cons = new ArrayList<CompareConstraint>
+		q.where.extractListOfCompareConstraints(cons)
+		var parameters = new ArrayList<String>
+		for (CompareConstraint c : cons) {
+			c.getParametersFromCompareConstraint(parameters)
+		}
+		return parameters
+	}
+
+	def getParametersFromCompareConstraint(CompareConstraint c, List<String> parameters) {
+		c.left.extractParameters(parameters)
+		c.right.extractParameters(parameters)
+	}
+	
+	def void extractParameters(Expression exp, List<String> list) {
+		switch exp {
+			Plus: { exp.left.extractParameters(list); exp.right.extractParameters(list) }
+			Minus: { exp.left.extractParameters(list); exp.right.extractParameters(list) }
+			Mult: { exp.left.extractParameters(list); exp.right.extractParameters(list) }
+			Div: { exp.left.extractParameters(list); exp.right.extractParameters(list) }
+			Parenthesis: exp.exp.extractParameters(list)
+			Parameter: list.add(exp.value)
+		}
+	}
+	
+	@Check
+	def validateParameterOnlyOnQuery(Parameter parameter) {
+		val q = EcoreUtil2.getContainerOfType(parameter, Query)
+		if (q === null) {
+			error('''Parameter «parameter.value» can only be used on Query types''', TypescriptdslPackage.Literals.PARAMETER__VALUE)
+		}
+	}
+	
+	@Check
+	def validateStringExpOnlyOnQuery(StringExp str) {
+		val q = EcoreUtil2.getContainerOfType(str, Query)
+		if (q === null) {
+			error('''StringExp «str.value» can only be used on Query types''', TypescriptdslPackage.Literals.STRING_EXP__VALUE)
+		}
+	}
+	
+	@Check
+	def validateRegexOnlyOnAttributeConstraint(RegexConstraint regCon) {
+		val q = EcoreUtil2.getContainerOfType(regCon, Attribute)
+		if (q === null) {
+			error('''RegexConstraint «regCon.value» can only be used on Attribute Constraint types''', TypescriptdslPackage.Literals.REGEX_CONSTRAINT__VALUE)
+		}
+	}
 	
 	@Check
 	def validateConstraint(Attribute attr) {

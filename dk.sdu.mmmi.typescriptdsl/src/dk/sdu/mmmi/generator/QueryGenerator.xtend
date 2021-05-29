@@ -2,8 +2,8 @@ package dk.sdu.mmmi.generator
 
 import java.util.List
 import dk.sdu.mmmi.typescriptdsl.Query
-import dk.sdu.mmmi.typescriptdsl.QueryType
 import static extension dk.sdu.mmmi.generator.Helpers.toCamelCase
+import static extension dk.sdu.mmmi.generator.Helpers.toSnakeCase
 import dk.sdu.mmmi.typescriptdsl.Select
 import dk.sdu.mmmi.typescriptdsl.AttributeType
 import dk.sdu.mmmi.typescriptdsl.IntType
@@ -28,6 +28,8 @@ import java.util.Map
 import java.util.HashMap
 import dk.sdu.mmmi.typescriptdsl.Parameter
 import java.util.HashSet
+import dk.sdu.mmmi.typescriptdsl.StringExp
+import dk.sdu.mmmi.typescriptdsl.Delete
 
 class QueryGenerator implements IQueryGenerator {
 	
@@ -66,7 +68,7 @@ class QueryGenerator implements IQueryGenerator {
 
 	private def generateQueriesInterface(List<Query> queries) '''
 		export interface Queries {
-			«FOR q: queries.filter[it.queryType instanceof Select]»
+			«FOR q: queries»
 				«q.name.toCamelCase»(«generateQueryParameters(q)»): Promise<«generateQueryReturnType(q)»>
 			«ENDFOR»
 		}
@@ -124,22 +126,17 @@ class QueryGenerator implements IQueryGenerator {
 				exp.left.printParametersExp
 				exp.right.printParametersExp	
 			}
-			NumberExp: {
-				''''''
-			}
 			Field: {
 				'''«exp.attr.type.attributeTypeAsString»'''
 			}
 			Parameter: {
 				'''«exp.value»'''
 			}
-			
-			default: throw new Exception()
+			default: ''''''
 		}
 	}
 	
 	private def generateQueryReturnType(Query q) {
-		/* Få xtext til at fatte ting fra select typen */
 		val qt = q.queryType
 		switch qt {
 			case qt instanceof Select: {
@@ -156,6 +153,9 @@ class QueryGenerator implements IQueryGenerator {
 					str.append(' }')
 					return str.toString
 				}
+			}
+			case qt instanceof Delete: {
+				return "{RowsDeleted: number}"
 			}
 			default: {
 				return 'default'
@@ -182,9 +182,9 @@ class QueryGenerator implements IQueryGenerator {
 	
 	private def generateKnexQuery(Query q) {
 		val qt = q.queryType
+		val str = new StringBuilder("return knexClient('" + q.table.name + "')");
 		switch qt {
 			case qt instanceof Select: {
-				val str = new StringBuilder("return knexClient('" + q.table.name + "')");
 				val temp = qt as Select
 				if (temp.all) {
 					str.append(".select()")
@@ -197,6 +197,14 @@ class QueryGenerator implements IQueryGenerator {
 					return str.toString
 				}
 			}
+			case qt instanceof Delete: {
+				val temp = qt as Delete
+				if (temp.all) {
+					str.append(".del()")
+					return str.toString
+				}
+				return str.toString
+			}
 		}
 	}
 	
@@ -205,11 +213,11 @@ class QueryGenerator implements IQueryGenerator {
 			return ''
 		}
 		var parameters = c.generateWhereRawParameters.toString
-		var str = new StringBuilder('.whereRaw("' + c.constraints)
+		var str = new StringBuilder(".whereRaw('" + c.constraints)
 		if (parameters.empty) {
-			str.append('")')
+			str.append("')")
 		} else {
-			str.append(parameters + ')')
+			str.append(parameters + ")")
 		}
 		return str
 	}
@@ -219,12 +227,11 @@ class QueryGenerator implements IQueryGenerator {
 		if (parameters.empty) {
 			return ''
 		}
-		var str = new StringBuilder('", [')
+		var str = new StringBuilder("', [")
 		for (String s : parameters) {
-			println(s)
-			str.append(s + ',')
+			str.append(s + ",")
 		}
-		str.append(']')
+		str.append("]")
 		return str
 	}
 	
@@ -256,8 +263,49 @@ class QueryGenerator implements IQueryGenerator {
 	}
 	
 	def CharSequence printRawParameters(Expression exp) {
+		println(exp)
 		switch exp {
 			Parameter: '''«exp.value»'''
+			Div: {
+				if (exp.left instanceof Parameter) {
+					exp.left.printRawParameters	
+				} else if (exp.right instanceof Parameter) {
+					exp.right.printRawParameters
+				} else {
+					exp.left.printRawParameters	
+					exp.right.printRawParameters	
+				}
+			}
+			Mult: {
+				if (exp.left instanceof Parameter) {
+					exp.left.printRawParameters	
+				} else if (exp.right instanceof Parameter) {
+					exp.right.printRawParameters
+				} else {
+					exp.left.printRawParameters	
+					exp.right.printRawParameters
+				}
+			}
+			Minus: {
+				if (exp.left instanceof Parameter) {
+					exp.left.printRawParameters	
+				} else if (exp.right instanceof Parameter) {
+					exp.right.printRawParameters
+				} else {
+					exp.left.printRawParameters	
+					exp.right.printRawParameters
+				}
+			}
+			Plus: {
+				if (exp.left instanceof Parameter) {
+					exp.left.printRawParameters	
+				} else if (exp.right instanceof Parameter) {
+					exp.right.printRawParameters
+				} else {
+					exp.left.printRawParameters	
+					exp.right.printRawParameters
+				}
+			}
 			default: ''''''
 		}
 	}
@@ -280,8 +328,9 @@ class QueryGenerator implements IQueryGenerator {
 			Div: '''«exp.left.printExp» / «exp.right.printExp»'''
 			Parenthesis: '''(«exp.exp.printExp»)'''
 			NumberExp: '''«exp.value»'''
-			Field: '''«exp.attr.name»'''
+			Field: '''«exp.attr.name.toSnakeCase»'''
 			Parameter: '''?'''
+			StringExp: '''"«exp.value»"'''
 			default: throw new Exception()
 		}
 	}
