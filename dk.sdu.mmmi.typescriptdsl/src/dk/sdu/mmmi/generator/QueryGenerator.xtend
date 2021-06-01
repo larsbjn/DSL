@@ -263,7 +263,6 @@ class QueryGenerator implements IQueryGenerator {
 	}
 	
 	def CharSequence printRawParameters(Expression exp) {
-		println(exp)
 		switch exp {
 			Parameter: '''«exp.value»'''
 			Div: {
