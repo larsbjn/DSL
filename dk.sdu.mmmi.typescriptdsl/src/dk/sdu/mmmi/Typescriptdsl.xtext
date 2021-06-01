@@ -106,8 +106,6 @@ QueryType:
 ;
 
 Select:
-	/* Create validation for checking ID = table.attributes */
-	/* Check if where statement for less or higher than is on ints attributes */
 	'select' (all?='*' | attributes+=[Attribute]+ (',' attributes+=[Attribute])*)
 ;
 
